@@ -6,17 +6,20 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 const renderer = new THREE.WebGLRenderer({antialias:true});
 camera.translateY(200);
 camera.lookAt(new THREE.Vector3(0,0,0));
+const cachedMatrix4 = new THREE.Matrix4();
+const cachedQuat = new THREE.Quaternion();
 
 // Trunk variables
 const material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
 const geometry = new THREE.Geometry();
 
 // Flowers variables
-const flowers = new THREE.Geometry();
-let flowerGeometry = new THREE.SphereGeometry(1, 32, 32 );
+const flowersGeometry = new THREE.Geometry();
+let flowerGeometry = new THREE.SphereGeometry(1, 12, 12 );
 const flowerMaterial = new THREE.MeshBasicMaterial({color:0xFF0000});
 
 // Leafs variable
+const leavesGeometry = new THREE.Geometry();
 const createLeafGeometry = () => {
   const points = [];
   for ( var i = 0; i < 10; i ++ ) {
@@ -29,7 +32,7 @@ const createLeafGeometry = () => {
   const z = bb.max.z - bb.min.z;
   const y = bb.max.y - bb.min.y;
   const x = bb.max.x - bb.min.x;
-  geom.applyMatrix( new THREE.Matrix4().makeTranslation(0, y/2.0, -z/2.) );
+  geom.applyMatrix( cachedMatrix4.makeTranslation(0, y/2.0, -z/2.) );
   return geom;
 }
 const leafGeometry = createLeafGeometry();
@@ -40,18 +43,18 @@ let angle = 35;
 let axiom = "F";
 let sentence = axiom;
 let len = 10;
-let limit = 5;
+let limit = 4;
 let rules = [];
 rules[0] = {
   // TRY new rules
   // a: "F",
   // b: "F[+F]F[-F]F"
 
-  // a: "F",
-  // b: "F[+F]F[-F][F]"
-
   a: "F",
-  b: "FF+[+F-F-F]-[-F+F+F]"
+  b: "F[+F]F[-F][F]"
+
+  // a: "F",
+  // b: "FF+[+F-F-F]-[-F+F+F]"
 }
 
 // Let's go!
@@ -78,8 +81,7 @@ let init = () => {
       camera.updateProjectionMatrix();
   });
 
-  let mesh = createTree();
-  scene.add(mesh);
+  createTree();
 
   render();
 };
@@ -92,15 +94,21 @@ const createTree = () => {
   for (const b of branches) {
     addBranch(geometry, b.start.position, b.end.position);
 
-    // TRY Add organs
+    //TRY Add organs
     // if(Math.random() > 0.5){
-    //   addFlower(b);
+    //   addFlower(b, flowersGeometry);
     // }else{
-    //   addLeaf(b);
+    //   addLeaf(b, leavesGeometry);
     // }
   }
-  const line = new THREE.LineSegments( geometry, material );
-  return line;
+  // let flower = new THREE.Mesh(flowersGeometry, flowerMaterial);
+  // scene.add(flower);
+
+  // const leaves = new THREE.Mesh(leavesGeometry, leafMaterial);
+  // scene.add(leaves);
+
+  const trunk = new THREE.LineSegments( geometry, material );
+  scene.add(trunk);
 }
 
 const addBranch = (geom,v1, v2) => {
@@ -108,24 +116,29 @@ const addBranch = (geom,v1, v2) => {
   geom.vertices.push(new THREE.Vector3( v2.x, v2.y, v2.z) );
 }
 
-const addFlower = (branch) => {
-  // TODO merge into one geometry
-  let mesh = new THREE.Mesh(flowerGeometry, flowerMaterial);
-  mesh.position.set(branch.end.position.x, branch.end.position.y, branch.end.position.z);
-  scene.add(mesh);
+const addFlower = (branch, flowersGeometry) => {
+  let flower = flowerGeometry.clone(); 
+  flower.applyMatrix(cachedMatrix4.makeTranslation(
+    branch.end.position.x,
+    branch.end.position.y,
+    branch.end.position.z));
+  flowersGeometry.merge(flower);
 }
 
-const addLeaf = (branch) => {
-  //TODO merge into one geometry
-  let mesh = new THREE.Mesh(leafGeometry, leafMaterial);
-  
-  let branchQuat = new THREE.Quaternion();
-  branch.end.getWorldQuaternion(branchQuat);
-  mesh.setRotationFromQuaternion(branchQuat);
+const addLeaf = (branch, leavesGeometry) => {  
+  branch.end.getWorldQuaternion(cachedQuat);
+  const leaf = leafGeometry.clone();
 
-  mesh.position.set(branch.end.position.x, branch.end.position.y, branch.end.position.z);
+  cachedMatrix4.makeRotationFromQuaternion(cachedQuat);
+  leaf.applyMatrix(cachedMatrix4);
   
-  scene.add(mesh);
+  cachedMatrix4.makeTranslation(
+    branch.end.position.x,
+    branch.end.position.y,
+    branch.end.position.z);
+  leaf.applyMatrix(cachedMatrix4);
+
+  leavesGeometry.merge(leaf);
 }
 
 const generate = (rules) => {
