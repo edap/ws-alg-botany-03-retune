@@ -1,34 +1,61 @@
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({antialias:true});
-const material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
-const geometry = new THREE.Geometry();
-const flowers = new THREE.Geometry();
 const DEG_TO_RAD = Math.PI/180;
+
+//THREE js variables
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1500);
+const renderer = new THREE.WebGLRenderer({antialias:true});
 camera.translateY(200);
 camera.lookAt(new THREE.Vector3(0,0,0));
-//L-Systems variables
+
+// Trunk variables
+const material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
+const geometry = new THREE.Geometry();
+
+// Flowers variables
+const flowers = new THREE.Geometry();
+let flowerGeometry = new THREE.SphereGeometry(1, 32, 32 );
+const flowerMaterial = new THREE.MeshBasicMaterial({color:0xFF0000});
+
+// Leafs variable
+const createLeafGeometry = () => {
+  const points = [];
+  for ( var i = 0; i < 10; i ++ ) {
+    points.push( new THREE.Vector2( Math.sin( i * 0.2 ) * 10 + 5, ( i - 5 ) * 2 ) );
+  }
+  
+  const geom = new THREE.LatheGeometry( points, 5, 0, 0.2 );
+  geom.computeBoundingBox();
+  const bb = geom.boundingBox;
+  const z = bb.max.z - bb.min.z;
+  const y = bb.max.y - bb.min.y;
+  const x = bb.max.x - bb.min.x;
+  geom.applyMatrix( new THREE.Matrix4().makeTranslation(0, y/2.0, -z/2.) );
+  return geom;
+}
+const leafGeometry = createLeafGeometry();
+const leafMaterial = new THREE.MeshPhongMaterial({color:0x00FF00, side: THREE.DoubleSide});
+
+//L-Systems rules variables
 let angle = 35;
 let axiom = "F";
 let sentence = axiom;
 let len = 10;
 let limit = 5;
-let decrease_percent = 0.65;
-
 let rules = [];
 rules[0] = {
+  // TRY new rules
   // a: "F",
   // b: "F[+F]F[-F]F"
 
-  a: "F",
-  b: "F[+F]F[-F][F]"
-
   // a: "F",
-  // b: "FF+[+F-F-F]-[-F+F+F]"
+  // b: "F[+F]F[-F][F]"
+
+  a: "F",
+  b: "FF+[+F-F-F]-[-F+F+F]"
 }
 
+// Let's go!
 let init = () => {
-  // set the renderer
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0x0cbcff, 1);
   document.body.style.margin =0;
@@ -36,16 +63,13 @@ let init = () => {
   camera.position.z = 80;
   controls = new THREE.OrbitControls( camera, renderer.domElement );
 
-  // set a light
   let light = new THREE.PointLight( 0xffffff, 1, 0 );
   light.position.set( 100, 200, 0);
   scene.add( light);
 
-  // draw axis, just to know where the x, y and z axis are
   let axisHelper = new THREE.AxesHelper( 50 );
-  //scene.add( axisHelper );
+  scene.add( axisHelper );
 
-  // when resizing the window, keep the proportions
   window.addEventListener('resize', function() {
       let WIDTH = window.innerWidth,
       HEIGHT = window.innerHeight;
@@ -54,7 +78,6 @@ let init = () => {
       camera.updateProjectionMatrix();
   });
 
-  // create a mesh and add it to the scene.
   let mesh = createTree();
   scene.add(mesh);
 
@@ -63,13 +86,18 @@ let init = () => {
 
 const createTree = () => {
   const branches = [];
-  generate(rules, branches);
-  //createBranchesFromSentence(sentence, branches);
-  //console.log(sentence);
-  console.log(branches.length);
+  const sentence = generate(rules);
+  createBranchesFromSentence(sentence, branches, len);
+  
   for (const b of branches) {
-    addBranch(geometry,b.start.position,b.end.position);
-    addFlower(b);
+    addBranch(geometry, b.start.position, b.end.position);
+
+    // TRY Add organs
+    // if(Math.random() > 0.5){
+    //   addFlower(b);
+    // }else{
+    //   addLeaf(b);
+    // }
   }
   const line = new THREE.LineSegments( geometry, material );
   return line;
@@ -81,12 +109,27 @@ const addBranch = (geom,v1, v2) => {
 }
 
 const addFlower = (branch) => {
-
+  // TODO merge into one geometry
+  let mesh = new THREE.Mesh(flowerGeometry, flowerMaterial);
+  mesh.position.set(branch.end.position.x, branch.end.position.y, branch.end.position.z);
+  scene.add(mesh);
 }
 
-const generate = (rules,branches) => {
+const addLeaf = (branch) => {
+  //TODO merge into one geometry
+  let mesh = new THREE.Mesh(leafGeometry, leafMaterial);
+  
+  let branchQuat = new THREE.Quaternion();
+  branch.end.getWorldQuaternion(branchQuat);
+  mesh.setRotationFromQuaternion(branchQuat);
+
+  mesh.position.set(branch.end.position.x, branch.end.position.y, branch.end.position.z);
+  
+  scene.add(mesh);
+}
+
+const generate = (rules) => {
   for(let l = 0; l < limit; l++){
-    //len *= 0.5;
     let nextSentence = "";
 
     for (var i = 0; i < sentence.length; i++) {
@@ -103,18 +146,14 @@ const generate = (rules,branches) => {
         nextSentence += current;
       }
     }
-
     sentence = nextSentence;
-    let flower = l === (limit-1) ? true : false;
-    //console.log(len);
-    createBranchesFromSentence(sentence, branches, len, flower);
-
   }
   return sentence;
 }
 
-const createBranchesFromSentence = (sentence, branches, len, flower) => {
+const createBranchesFromSentence = (sentence, branches, len) => {
   let turtle = new THREE.Object3D();
+  turtle.position.set(0,-200,0);
   const bookmark = [];
 
   for (let i = 0; i < sentence.length; i++) {
@@ -134,37 +173,14 @@ const createBranchesFromSentence = (sentence, branches, len, flower) => {
     }
 
     if (addBranch) {
-      console.log(len);
-      // TODO add random rotation on the y axis
-      turtle.rotateY(Math.random()* Math.PI/6);
+      // TRY add random rotation on the y axis
+      // turtle.rotateY(Math.random()* Math.PI/6);
       let end = turtle.clone().translateY(len);
-      //if (branchDoesNotExist(branches, turtle, end, len)) { // DOES NOT WORK
-        let branch = { "start": turtle.clone(), "end": end, "len":len, "flower":flower };
-        //console.log(branch);
-        turtle.copy(end);
-        branches.push(branch);
-      //}
+      let branch = { "start": turtle.clone(), "end": end};
+      turtle.copy(end);
+      branches.push(branch);
     }
   }
-}
-
-const branchDoesNotExist = (branches, turtle, end, len) => {
-  for (b of branches){
-    if(b.end.position.x === end.position.x &&
-      b.end.position.y === end.position.y && 
-      b.end.position.z === end.position.z && 
-
-      b.start.position.x === turtle.position.x &&
-      b.start.position.y === turtle.position.y &&
-      b.start.position.z === turtle.position.z &&
-
-      len === b.len
-      ){
-      return false;
-    }
-  }
-  return true;
-
 }
 
 const render = () => {
