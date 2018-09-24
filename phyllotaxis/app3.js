@@ -81,7 +81,7 @@ function resetGroup(){
 function render(){
   if(!exporting){
       // TODO , try to rotate the group
-      group.rotateZ( 0.0137);
+      // group.rotateZ( 0.0137);
       bloomEffect.render();
   }
   requestAnimationFrame(render);

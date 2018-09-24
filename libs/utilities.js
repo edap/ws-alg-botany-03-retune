@@ -25,6 +25,8 @@ class CollectionMaterials {
       let materials = {
           "standard": new THREE.MeshStandardMaterial(
               {color: 0x3c00, emissive:0x1b0808,metalness:0.07,roughness:0.43} ),
+           "standard2": new THREE.MeshStandardMaterial(
+                {color: 0xFFFF, emissive:0x1b0808,metalness:0.07,roughness:0.43} ),
           "wireframe": new THREE.MeshBasicMaterial( {color: 0x00ff00, wireframe: true} ),
           "phong": new THREE.MeshPhongMaterial({color: 0x2194CE}),
           "lambert": new THREE.MeshLambertMaterial({color: 0x2194CE})
@@ -74,12 +76,16 @@ class Gui extends dat.GUI{
           geometry: "sphere",
           material: "standard",
           angle: 137.5,
+          angle_y: 92.3,
+          scale_x: 6.0,
+          scale_y: 1.0,
+          scale_z: 1.0,
           spread: 0.4,
           extrude: 0.5,
           num:3
       };
       // it does not work without a local server
-      //this.remember(this.params);
+      // this.remember(this.params);
 
       let saveMesh = { add:callbackExport};
       this.add(saveMesh, 'add').name('SAVE');
@@ -87,6 +93,9 @@ class Gui extends dat.GUI{
 
       this.add(this.params, "geometry", ["sphere", "box", "lathe", "icosahedron", "thorus"]).onChange(regenerateMesh);
       this.add(this.params, "angle").min(136.0).max(138.0).step(0.1).onChange(regenerateMesh);
+      this.add(this.params, "angle_y").min(30.0).max(160.0).step(0.1);
+      this.add(this.params, "scale_x").min(1.0).max(15.0).step(1);
+      this.add(this.params, "scale_z").min(1.0).max(15.0).step(1);
       this.add(this.params, "spread").min(0.2).max(10.0).step(0.2).onChange(regenerateMesh);
       this.add(this.params, "extrude").min(0.0).max(5.0).step(0.1).onChange(regenerateMesh);
       this.add(this.params, "num").min(1).max(800).step(1).onChange(regenerateMesh);
@@ -157,7 +166,8 @@ class Gui extends dat.GUI{
     let animFolder = this.addFolder('animation');
     let data = {
         anim : {
-            "amplitude" : 0.1,
+            "spread" : false,
+            "amplitude" : 7.1,
             "freq" : 0.01,
             "zoetrope" : false,
             "zoetrope_angle" : 0.6
@@ -165,7 +175,8 @@ class Gui extends dat.GUI{
     }
     this.params.anim = data.anim;
     animFolder.add(data.anim, "freq").min(0.01).max(0.2).step(0.01);
-    animFolder.add(data.anim, "amplitude").min(0.0).max(5.0).step(0.025);
+    animFolder.add(data.anim, "amplitude").min(0.0).max(15.0).step(0.025);
+    animFolder.add(data.anim, "spread");
     animFolder.add(data.anim, "zoetrope");
     animFolder.add(data.anim, "zoetrope_angle").min(0.0).max(1.5).step(0.01);
   }

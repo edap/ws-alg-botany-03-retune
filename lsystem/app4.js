@@ -25,7 +25,7 @@ const flowerMaterial = new THREE.MeshStandardMaterial({color:0x5598CC});
 const leavesGeometry = new THREE.Geometry();
 const createLeafGeometry = () => {
   const points = [];
-  for ( var i = 0; i < 10; i ++ ) {
+  for ( let i = 0; i < 10; i ++ ) {
     points.push( new THREE.Vector2( Math.sin( i * 0.2 ) * 10 + 5, ( i - 5 ) * 2 ) );
   }
   
@@ -41,12 +41,12 @@ const leafGeometry = createLeafGeometry();
 const leafMaterial = new THREE.MeshStandardMaterial({color:0xFF8884, side: THREE.DoubleSide});
 
 //L-Systems rules variables
-let angle = 35;
-let axiom = "F";
+const angle = 35;
+const axiom = "F";
 let sentence = axiom;
-let len = 10;
-let limit = 4;
-let rules = [];
+const len = 10;
+const limit = 4;
+const rules = [];
 rules[0] = {
   // TRY new rules
   // a: "F",
@@ -60,7 +60,7 @@ rules[0] = {
 }
 
 // Let's go!
-let init = () => {
+const init = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0xFDFF9E, 1);
   document.body.style.margin =0;
@@ -81,9 +81,9 @@ let init = () => {
 	directionalLight.position.normalize();
 	scene.add( directionalLight );
 
-
-  //let axisHelper = new THREE.AxesHelper( 50 );
-  //scene.add( axisHelper );
+  // Have a look at the axis
+  let axisHelper = new THREE.AxesHelper( 50 );
+  scene.add( axisHelper );
 
   window.addEventListener('resize', function() {
       let WIDTH = window.innerWidth,
@@ -107,11 +107,11 @@ const createTree = () => {
     addBranch(geometry, b.start.position, b.end.position);
 
     //TRY Add organs
-    if (b.end.position.y > 0 && Math.random() > 0.5) {
-      addFlower(b, flowersGeometry);
-    } else {
-      addLeaf(b, leavesGeometry);
-    }
+    // if (b.end.position.y > 0 && Math.random() > 0.5) {
+    //   addFlower(b, flowersGeometry);
+    // } else {
+    //   addLeaf(b, leavesGeometry);
+    // }
   }
   let flower = new THREE.Mesh(flowersGeometry, flowerMaterial);
   tree.add(flower)
@@ -202,7 +202,7 @@ const createBranchesFromSentence = (sentence, branches, len) => {
 
     if (addBranch) {
       // TRY add random rotation on the y axis
-      turtle.rotateY(Math.random()* Math.PI/6);
+      // turtle.rotateY(Math.random()* Math.PI/6);
       let end = turtle.clone().translateY(len);
       let branch = { "start": turtle.clone(), "end": end};
       turtle.copy(end);
@@ -212,7 +212,8 @@ const createBranchesFromSentence = (sentence, branches, len) => {
 }
 
 const render = () => {
-  tree.rotateY(0.001);
+  // TRY, addo some rotation
+  // tree.rotateY(0.001);
   renderer.render(scene, camera);
   requestAnimationFrame(render);
 }
