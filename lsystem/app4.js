@@ -9,14 +9,17 @@ camera.lookAt(new THREE.Vector3(0,0,0));
 const cachedMatrix4 = new THREE.Matrix4();
 const cachedQuat = new THREE.Quaternion();
 
+// The Tree
+const tree = new THREE.Group();
+
 // Trunk variables
-const material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
+const material = new THREE.LineBasicMaterial( { color: 0xB24E4B } );
 const geometry = new THREE.Geometry();
 
 // Flowers variables
 const flowersGeometry = new THREE.Geometry();
 let flowerGeometry = new THREE.SphereGeometry(1, 12, 12 );
-const flowerMaterial = new THREE.MeshBasicMaterial({color:0xFF0000});
+const flowerMaterial = new THREE.MeshStandardMaterial({color:0x5598CC});
 
 // Leafs variable
 const leavesGeometry = new THREE.Geometry();
@@ -31,12 +34,11 @@ const createLeafGeometry = () => {
   const bb = geom.boundingBox;
   const z = bb.max.z - bb.min.z;
   const y = bb.max.y - bb.min.y;
-  const x = bb.max.x - bb.min.x;
   geom.applyMatrix( cachedMatrix4.makeTranslation(0, y/2.0, -z/2.) );
   return geom;
 }
 const leafGeometry = createLeafGeometry();
-const leafMaterial = new THREE.MeshPhongMaterial({color:0x00FF00, side: THREE.DoubleSide});
+const leafMaterial = new THREE.MeshStandardMaterial({color:0xFF8884, side: THREE.DoubleSide});
 
 //L-Systems rules variables
 let angle = 35;
@@ -50,28 +52,38 @@ rules[0] = {
   // a: "F",
   // b: "F[+F]F[-F]F"
 
-  a: "F",
-  b: "F[+F]F[-F][F]"
-
   // a: "F",
-  // b: "FF+[+F-F-F]-[-F+F+F]"
+  // b: "F[+F]F[-F][F]"
+
+  a: "F",
+  b: "FF+[+F-F-F]-[-F+F+F]"
 }
 
 // Let's go!
 let init = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x0cbcff, 1);
+  renderer.setClearColor(0xFDFF9E, 1);
   document.body.style.margin =0;
   document.body.appendChild(renderer.domElement);
   camera.position.z = 80;
   controls = new THREE.OrbitControls( camera, renderer.domElement );
 
-  let light = new THREE.PointLight( 0xffffff, 1, 0 );
+  const light = new THREE.PointLight( 0xffffff, 1, 0 );
   light.position.set( 100, 200, 0);
   scene.add( light);
 
-  let axisHelper = new THREE.AxesHelper( 50 );
-  scene.add( axisHelper );
+	const light2 = new THREE.PointLight( 0xffffff, 1, 100 );
+	light2.position.set(0, 100, -200);
+  scene.add( light2 );
+  
+	const directionalLight = new THREE.DirectionalLight( 0xffffff );
+	directionalLight.position.set(0, 0.5, -0.5);
+	directionalLight.position.normalize();
+	scene.add( directionalLight );
+
+
+  //let axisHelper = new THREE.AxesHelper( 50 );
+  //scene.add( axisHelper );
 
   window.addEventListener('resize', function() {
       let WIDTH = window.innerWidth,
@@ -95,20 +107,22 @@ const createTree = () => {
     addBranch(geometry, b.start.position, b.end.position);
 
     //TRY Add organs
-    // if(Math.random() > 0.5){
-    //   addFlower(b, flowersGeometry);
-    // }else{
-    //   addLeaf(b, leavesGeometry);
-    // }
+    if (b.end.position.y > 0 && Math.random() > 0.5) {
+      addFlower(b, flowersGeometry);
+    } else {
+      addLeaf(b, leavesGeometry);
+    }
   }
-  // let flower = new THREE.Mesh(flowersGeometry, flowerMaterial);
-  // scene.add(flower);
+  let flower = new THREE.Mesh(flowersGeometry, flowerMaterial);
+  tree.add(flower)
 
-  // const leaves = new THREE.Mesh(leavesGeometry, leafMaterial);
-  // scene.add(leaves);
+  const leaves = new THREE.Mesh(leavesGeometry, leafMaterial);
+  tree.add(leaves);
 
   const trunk = new THREE.LineSegments( geometry, material );
-  scene.add(trunk);
+  tree.add(trunk);
+
+  scene.add(tree);
 }
 
 const addBranch = (geom,v1, v2) => {
@@ -122,12 +136,13 @@ const addFlower = (branch, flowersGeometry) => {
     branch.end.position.x,
     branch.end.position.y,
     branch.end.position.z));
+
   flowersGeometry.merge(flower);
 }
 
-const addLeaf = (branch, leavesGeometry) => {  
+const addLeaf = (branch, leavesGeometry) => {
+  const leaf = leafGeometry.clone();  
   branch.end.getWorldQuaternion(cachedQuat);
-  const leaf = leafGeometry.clone();
 
   cachedMatrix4.makeRotationFromQuaternion(cachedQuat);
   leaf.applyMatrix(cachedMatrix4);
@@ -145,8 +160,8 @@ const generate = (rules) => {
   for(let l = 0; l < limit; l++){
     let nextSentence = "";
 
-    for (var i = 0; i < sentence.length; i++) {
-      let current = sentence.charAt(i);
+    for (let i = 0; i < sentence.length; i++) {
+      const current = sentence.charAt(i);
       let found = false;
       for (let j = 0; j < rules.length; j++) {
         if (current == rules[j].a) {
@@ -165,12 +180,12 @@ const generate = (rules) => {
 }
 
 const createBranchesFromSentence = (sentence, branches, len) => {
-  let turtle = new THREE.Object3D();
+  const turtle = new THREE.Object3D();
   turtle.position.set(0,-200,0);
   const bookmark = [];
 
   for (let i = 0; i < sentence.length; i++) {
-    let current = sentence.charAt(i);
+    const current = sentence.charAt(i);
 
     let addBranch = false;
     if (current == "F") {
@@ -187,7 +202,7 @@ const createBranchesFromSentence = (sentence, branches, len) => {
 
     if (addBranch) {
       // TRY add random rotation on the y axis
-      // turtle.rotateY(Math.random()* Math.PI/6);
+      turtle.rotateY(Math.random()* Math.PI/6);
       let end = turtle.clone().translateY(len);
       let branch = { "start": turtle.clone(), "end": end};
       turtle.copy(end);
@@ -197,6 +212,7 @@ const createBranchesFromSentence = (sentence, branches, len) => {
 }
 
 const render = () => {
+  tree.rotateY(0.001);
   renderer.render(scene, camera);
   requestAnimationFrame(render);
 }
